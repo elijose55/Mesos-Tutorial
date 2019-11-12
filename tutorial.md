@@ -2,7 +2,7 @@
 
 Para realizar esse tutorial, é necessária uma máquina rodando Ubuntu server, podendo estar rodando na plataforma de sua escolha: AWS, Azure ou VirtualBox na sua própria máquina.
 Nesse começo trataremos sobre como criar uma instância na AWS adequada para rodar o Mesos.
-###### - Criando instância na AWS EC2
+#####  Criando instância na AWS EC2
 1. Realize o login no AWS Console e navegue para a seção do EC2.
 2. Clique em **Launch Instance** e selecione a imagem **Ubuntu Server 16.04 LTS AMI (Eligible for Free tier)**.
 3. Em **Instance Type** selecione **t2.micro** e continue para **Configure Instance Details**.
@@ -19,7 +19,7 @@ Nesse começo trataremos sobre como criar uma instância na AWS adequada para ro
     $ ssh –i /dir/da/pem ubuntu@[IP-DA-INSTANCIA]
     ```
 
-###### - Configurando ambiente da Instância
+#####  Configurando ambiente da Instância
 1. Após se conectar a instância, é preciso instalar o Java JDK 8
     ```sh
     $ sudo apt-get update
@@ -41,7 +41,7 @@ Nesse começo trataremos sobre como criar uma instância na AWS adequada para ro
     $ sudo apt-get -y install mesos
     ```
     Antes de começar a rodar o Mesos é preciso configurar algumas variáveis e arquivos.
-###### - Configurando o Mesos
+#####  Configurando o Mesos
 1. Execute o comando:
     ```sh
     $ hostname -f
@@ -81,140 +81,35 @@ Nesse começo trataremos sobre como criar uma instância na AWS adequada para ro
     $ sudo sh -c 'echo "[IP-INTERNO-DA-INSTANCIA]" >> hostname'
     $ cat quorum
     ```
-    **Observação:** Caso o mesos seja executado em uma subnet privada, utilize o IP Interno da instância para ambos os arquivos. Mas caso esteja em uma subnet pública, utilize o IP público da instância.
-
-###### - Iniciando o zookeeper, mesos-master e mesos-slave
     
+**Observação:** Caso o mesos seja executado em uma subnet privada, utilize o IP Interno da instância para ambos os arquivos. Mas caso esteja em uma subnet pública, utilize o IP público da instância.
 
-    
-    
-    
-    
-    
-Dillinger requires [Node.js](https://nodejs.org/) v4+ to run.
+#####  Iniciando o zookeeper, mesos-master e mesos-slave
 
-Install the dependencies and devDependencies and start the server.
-
+Agora que o ambiente e as variáveis estão todas configuradas, podemos iniciar o processo do mesos-master, mesos-slave e do zookeeper. Para isso, utilize os seguintes comandos:
 ```sh
-$ cd dillinger
-$ npm install -d
-$ node app
+$ sudo service zookeeper start
+$ sudo service mesos-master start
+$ sudo service mesos-slave start
+```
+Para verificar que tudo está rodando sem erros utilize os seguintes comandos para obter o status dos processos:
+```sh
+$ sudo service zookeeper status
+$ sudo service mesos-master status
+$ sudo service mesos-slave status
 ```
 
-For production environments...
+O output deve ser parecido com o mostrado abaixo:
+IMAGEM
 
+Quando todos os serviços estiverem rodando corretamente, utilize seu browser e acesse o endereço **[IP_PUBLICO_INSTANCIA]:5050** para entrar no dashboard do mesos, ilustrado abaixo:
+**Observação:** Se seu computador estiver conectado a uma rede publica, como de faculdades, esse endereço pode ser bloqueado no browser.
+IMAGEM
+
+
+Como não rodamos nenhum framework ainda, a lista de frameworks estará vazia. 
+
+Para executar um comando simples na infraestrutura recém-criada podemos utilizar a seguinte sintaxe:
 ```sh
-$ npm install --production
-$ NODE_ENV=production node app
+$ mesos-execute --master=<IP_PUBLICO>:5050 --name="echo-test" --command=echo "Hello, World"
 ```
-
-### Plugins
-
-Dillinger is currently extended with the following plugins. Instructions on how to use them in your own application are linked below.
-
-| Plugin | README |
-| ------ | ------ |
-| Dropbox | [plugins/dropbox/README.md][PlDb] |
-| GitHub | [plugins/github/README.md][PlGh] |
-| Google Drive | [plugins/googledrive/README.md][PlGd] |
-| OneDrive | [plugins/onedrive/README.md][PlOd] |
-| Medium | [plugins/medium/README.md][PlMe] |
-| Google Analytics | [plugins/googleanalytics/README.md][PlGa] |
-
-
-### Development
-
-Want to contribute? Great!
-
-Dillinger uses Gulp + Webpack for fast developing.
-Make a change in your file and instantanously see your updates!
-
-Open your favorite Terminal and run these commands.
-
-First Tab:
-```sh
-$ node app
-```
-
-Second Tab:
-```sh
-$ gulp watch
-```
-
-(optional) Third:
-```sh
-$ karma test
-```
-#### Building for source
-For production release:
-```sh
-$ gulp build --prod
-```
-Generating pre-built zip archives for distribution:
-```sh
-$ gulp build dist --prod
-```
-### Docker
-Dillinger is very easy to install and deploy in a Docker container.
-
-By default, the Docker will expose port 8080, so change this within the Dockerfile if necessary. When ready, simply use the Dockerfile to build the image.
-
-```sh
-cd dillinger
-docker build -t joemccann/dillinger:${package.json.version} .
-```
-This will create the dillinger image and pull in the necessary dependencies. Be sure to swap out `${package.json.version}` with the actual version of Dillinger.
-
-Once done, run the Docker image and map the port to whatever you wish on your host. In this example, we simply map port 8000 of the host to port 8080 of the Docker (or whatever port was exposed in the Dockerfile):
-
-```sh
-docker run -d -p 8000:8080 --restart="always" <youruser>/dillinger:${package.json.version}
-```
-
-Verify the deployment by navigating to your server address in your preferred browser.
-
-```sh
-127.0.0.1:8000
-```
-
-#### Kubernetes + Google Cloud
-
-See [KUBERNETES.md](https://github.com/joemccann/dillinger/blob/master/KUBERNETES.md)
-
-
-### Todos
-
- - Write MORE Tests
- - Add Night Mode
-
-License
-----
-
-MIT
-
-
-**Free Software, Hell Yeah!**
-
-[//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
-
-
-   [dill]: <https://github.com/joemccann/dillinger>
-   [git-repo-url]: <https://github.com/joemccann/dillinger.git>
-   [john gruber]: <http://daringfireball.net>
-   [df1]: <http://daringfireball.net/projects/markdown/>
-   [markdown-it]: <https://github.com/markdown-it/markdown-it>
-   [Ace Editor]: <http://ace.ajax.org>
-   [node.js]: <http://nodejs.org>
-   [Twitter Bootstrap]: <http://twitter.github.com/bootstrap/>
-   [jQuery]: <http://jquery.com>
-   [@tjholowaychuk]: <http://twitter.com/tjholowaychuk>
-   [express]: <http://expressjs.com>
-   [AngularJS]: <http://angularjs.org>
-   [Gulp]: <http://gulpjs.com>
-
-   [PlDb]: <https://github.com/joemccann/dillinger/tree/master/plugins/dropbox/README.md>
-   [PlGh]: <https://github.com/joemccann/dillinger/tree/master/plugins/github/README.md>
-   [PlGd]: <https://github.com/joemccann/dillinger/tree/master/plugins/googledrive/README.md>
-   [PlOd]: <https://github.com/joemccann/dillinger/tree/master/plugins/onedrive/README.md>
-   [PlMe]: <https://github.com/joemccann/dillinger/tree/master/plugins/medium/README.md>
-   [PlGa]: <https://github.com/RahulHP/dillinger/blob/master/plugins/googleanalytics/README.md>
