@@ -1,0 +1,89 @@
+sudo apt-get update
+sudo apt install openjdk-8-jdk openjdk-8-jre
+
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv DF7D54CBE56151BF
+or
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv E56151F
+
+sudo nano mesosphere.list
+
+- Adicionar no arquivo o seguinte texto: 
+deb http://repos.mesosphere.com/ubuntu xenial main
+
+
+apt-get -y install mesos
+
+- Rode o comando e anote o hostname da instancia:
+	$hostname -f 
+
+
+cd /etc/zookeeper/conf
+sudo nano zoo.cfg
+
+- Edite o arquivo zoo.cfg como mostrado abaixo, descomente a linha que se inicia com server.1 e substitua zookeeper1 com o hostname anotado anteriormente. Como estamos utilizando uma unica maquina, pode-se substituir tambem por localhost.
+
+
+- Rode o seguinte comando para editar o arquivo myid dentro do diretorio /etc/zookeeper/conf. Aqui estamos adicionando o numero 1 ao arquivo. Esse numero eh o server id para cada instancia zookeeper do cluster, ele nao pode ser repetido e varia entre 1 a 255.
+
+cd /etc/zookeeper/conf
+sudo sh -c 'echo -n "1" >> myid'
+
+cd /etc/mesos
+
+- Navigate to /etc/mesos directory and edit the zk file to point to the zookeeper instance. As it is a single machine, localhost will work fine, but we will still provide instance hostname as given below. Do the same for all mesos-master in cluster (if any). Internal IP can also be used instead of complete hostnames. In case of multiple zookeepers, this property can be set as:
+zk://10.102.5.183:2181,10.102.5.123:2181,10.102.5.150:2181/mesos
+
+
+
+- Switch to /etc/mesos-master directory and edit the quorum file with an integer. A replicated group of servers in the same application is called a quorum, and in replicated mode, all servers in the quorum have the same configurations.
+
+cd /etc/mesos-master
+
+- Note: The quorum should be set in a way that 50 percent of the master members should be present to make decisions. Ideally, this number should be greater than the number of masters divided by two. Since we are running single node, we set it to 1.
+
+- Em seguida eh preciso configurar o hostname e endereco IP para nosso mesos-master. Crie 2 arquivos "ip" e "hostname", dentro do diretorio /etc/mesos-master com os valores corretos.
+
+cd /etc/mesos-master
+sudo sh -c 'echo "172.31.90.68" >> etc/mesos-master/ip'
+sudo sh -c 'echo "172.31.90.68" >> hostname'
+
+Note: If the mesos is deployed in private subnet, use private IP for both files ip and hostname. But if deployed in public subnet for POC, use Public IP in hostname and private IP in ip file. Public IP will allow you to access Sandbox and view logs.
+
+
+- Now all the configurations are in place. We can now start mesos-master and mesos-slave. Use the following commands to start required services:
+
+sudo service zookeeper start
+sudo service mesos-master start
+sudo service mesos-slave start
+
+- Para verificar que tudo esta rodando sem erros utilize os seguintes comandos para debuggar:
+
+sudo service zookeeper status
+sudo service mesos-master status
+sudo service mesos-slave status
+
+- O output devera ser parecido com o abaixo:
+
+IMAGEM
+
+- Entao, quando todos os servicos estiverem rodando corretamente, utilize seu browser e acesse o endereco: [IP_PUBLICO]:5050
+
+- OBSERVACAO: Se seu computador estiver conectado em uma rede publica, como de faculdades, esse endereco pode ser bloqueado no browser.
+
+- Para testar um framework simples com um "hello world" na infraestrutura recem criada, podemos executar o seguinte comando: 
+
+mesos-execute --master=<IP_PUBLICO>:5050 --name="echo-test" --command=echo "Hello, World"
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
