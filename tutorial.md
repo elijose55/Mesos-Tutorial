@@ -334,6 +334,8 @@ Clicando o **ID** do framework detalhamos suas tarefas:
     
     
 O framework criado foi baseado nas seguintes fontes:
+
+
 http://mesos.apache.org/documentation/latest/app-framework-development-guide/
 
 
@@ -345,6 +347,8 @@ https://github.com/smurli/pymesos-sample
 
 
 O tutorial se baseou na seguinte fonte:
+
+
 https://linuxacademy.com/guide/25034-introduction-to-apache-mesos/
 
 
