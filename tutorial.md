@@ -58,10 +58,7 @@ Nesse começo trataremos sobre como criar uma instância na AWS adequada para ro
     $ cd /etc/zookeeper/conf
     $ sudo sh -c 'echo -n "1" >> myid'
     ```
-4. Navegue para o diretório: **/etc/mesos** e edite o arquivo **zk** para apontar para o IP interno da instância do zookeeper como mostrado na imagem abaixo, novamente, como estamos utilizando uma única máquina pode-se usar localhost. Caso haja mais de uma instância rodando um mesos-master, o mesmo deverá ser feito em todas. Para clusters com mais de um zookeeper essa propriedade pode ser configurada como:
-    ```sh
-    zk://10.102.5.183:2181,10.102.5.123:2181,10.102.5.150:2181/mesos
-    ```
+4. Navegue para o diretório: **/etc/mesos** e edite o arquivo **zk** para apontar para o IP interno da instância do zookeeper como mostrado na imagem abaixo, novamente, como estamos utilizando uma única máquina pode-se usar localhost. Caso haja mais de uma instância rodando um mesos-master, o mesmo deverá ser feito em todas. 
     ```sh
     $ cd /etc/mesos
     $ sudo nano zk
@@ -71,15 +68,15 @@ Nesse começo trataremos sobre como criar uma instância na AWS adequada para ro
     ```sh
     $ cd /etc/mesos-master
     $ sudo nano quorum
-    $ cat quorum
     ```
 
 6. Ainda é preciso configurar o hostname e endereco IP para nosso mesos-master. Crie 2 arquivos **ip** e **hostname**, dentro do diretorio **/etc/mesos-master** com os valores corretos.
     ```sh
     $ cd /etc/mesos-master
-    $ sudo sh -c 'echo "[IP-INTERNO-DA-INSTANCIA]" >> etc/mesos-master/ip'
+    $ sudo sh -c 'echo "[IP-INTERNO-DA-INSTANCIA]" >> ip'
     $ sudo sh -c 'echo "[IP-INTERNO-DA-INSTANCIA]" >> hostname'
-    $ cat quorum
+    $ cat ip
+    $ cat hostname
     ```
     
 **Observação:** Caso o mesos seja executado em uma subnet privada, utilize o IP Interno da instância para ambos os arquivos. Mas caso esteja em uma subnet pública, utilize o IP público da instância.
@@ -113,3 +110,200 @@ Para executar um comando simples na infraestrutura recém-criada podemos utiliza
 ```sh
 $ mesos-execute --master=<IP_PUBLICO>:5050 --name="echo-test" --command=echo "Hello, World"
 ```
+
+####  Criando um framework
+Como explicado anteriormente, para executar tarefas sobre a infraestrutura gerenciada pelo mesos master é preciso de um framework que define essa intermediação. Assim, vamos explicar abaixo a composição e configuração de um framework em **Python**.
+Para esse framework utilizamos a biblioteca **pymesos** disponível para Python e realizamos os seguintes imports no arquivo python:
+```python
+from pymesos import MesosSchedulerDriver, Scheduler, encode_data
+import uuid
+from addict import Dict
+import socket
+import getpass
+from threading import Thread
+import signal
+import time
+import enum
+import os
+```
+
+Primeiramente temos uma classe que define as **Tasks**, estas recebem em sua inicialização um ***taskId***, um ***comando*** a ser executado e os ***resources necessários (cpu e memória)***.
+```python
+class Task:
+    def __init__(self, taskId, command, cpu, mem):
+        self.taskId = taskId
+        self.command = command
+        self.cpu = cpu
+        self.mem = mem
+```
+
+Então temos um conjunto de métodos para essa classe que são utilizados para aceitar uma oferta de recursos para executar a tarefa: 
+- O método **_getResource** retorna valor de um recurso específico disponibilizado em uma oferta, por exemplo, **memória**, ele é utilizado na etapa de definir se os recursos de uma oferta são suficientes para rodar a tarefa.
+    ```python
+    def __getResource(self, res, name):
+        for r in res:
+            if r.name == name:
+                return r.scalar.value
+        return 0.0
+    ```
+    
+- O método **_updateResource** atualiza o valor de um recurso específico, ele é utlizado quando uma oferta é aceita. Assim, ele basicamente subtrai o valor necessário de certo recurso para a tarefa do valor total de certo recurso na oferta.
+    ```python
+    def __updateResource(self, res, name, value):
+        if value <= 0:
+            return
+        for r in res:
+            if r.name == name:
+                r.scalar.value -= value
+        return
+    ```
+    
+- O método **acceptOrder** determina se uma oferta recebida é adequada para executar a tarefa. Assim, a partir dos métodos acima ele verifica se o valor de recursos da oferta é maior que o valor de recursos necessários para a execução da tarefa e aceita ou não esta oferta, atualizando os recursos disponíveis caso a oferta seja aceitada.
+    ```python
+    def acceptOffer(self, offer):
+        accept = True
+        if self.cpu != 0:
+            cpu = self.__getResource(offer.resources, "cpus")
+            if self.cpu > cpu:
+                accept =  False
+        if self.mem != 0:
+            mem = self.__getResource(offer.resources, "mem")
+            if self.mem > mem:
+                accept = False
+        if(accept == True):
+            self.__updateResource(offer.resources, "cpus", self.cpu)
+            self.__updateResource(offer.resources, "mem", self.mem)
+            return True
+        else:
+            return False
+    ```
+    
+Em seguida temos uma classe que define o **Scheduler**, ela é inicializada com listas e dicionários vazios que são usados para armazenarem as tarefas disponíveis, em inicialização, em execução e terminadas. 
+Além disso, neste caso na incialização da classe já inserimos na lista de tarefas disponíveis as tarefas a serem executadas, mas poderiamos criar um método para que a classe recebesse as tarefas dinâmicamente. Essas tarefas serão melhor explicadas futuramente neste guia.
+```python
+class PythonScheduler(Scheduler):
+    def __init__(self):
+        self.idleTaskList = []
+        self.startingTaskList = {}
+        self.runningTaskList = {}
+        self.terminatingTaskList = {}
+
+        self.idleTaskList.append(Task("taskHelloWorld", "echo HelloWorld", .1, 100))
+        self.idleTaskList.append(Task("taskDIR", "mkdir /home/ubuntu/HelloMesos", .1, 100))
+```
+Então, temos um método ***resourceOffers*** que verifica se há alguma tarefa pendente na lista e caso haja, ele cria uma oferta para essa tarefa por meio do método ***acceptOffer*** da classe **Task**. Assim, caso a oferta seja aceita ele executa a tarefa no cluster e a adiciona na lista correspondente.
+```python
+    def resourceOffers(self, driver, offers):
+        logging.debug("Received new offers")
+        logging.info("Recieved resource offers: {}".format([o.id.value for o in offers]))
+
+        if(len(self.idleTaskList) == 0):
+            driver.suppressOffers()
+            logging.info("Idle Tasks List Empty, Suppressing Offers")
+            return
+
+        filters = {'refuse_seconds': 1}
+
+        for offer in offers:
+            taskList = []
+            pendingTaksList = []
+            while True:
+                if len(self.idleTaskList) == 0:
+                    break
+                Task = self.idleTaskList.pop(0)
+                if Task.acceptOffer(offer):
+                    task = Dict()
+                    task_id = Task.taskId
+                    task.task_id.value = task_id
+                    task.agent_id.value = offer.agent_id.value
+                    task.name = 'task {}'.format(task_id)
+                    task.command.value = Task.command
+                    task.resources = [
+                        dict(name='cpus', type='SCALAR', scalar={'value': Task.cpu}),
+                        dict(name='mem', type='SCALAR', scalar={'value': Task.mem}),
+                    ]
+                    self.startingTaskList[task_id] = Task
+                    taskList.append(task)
+                    logging.info("Starting task: %s, in node: %s" % (Task.taskId, offer.hostname))
+                else:
+                    pendingTaksList.append(Task)
+
+            if(len(taskList)):
+                    driver.launchTasks(offer.id, taskList, filters)
+
+            self.idleTaskList = pendingTaksList
+```
+
+Por fim, há o método ***statusUpdate*** que é utilizado para logar o status de execução da tarefa e atualizar sua lista e estado.
+```python
+    def statusUpdate(self, driver, update):
+        if update.state == "TASK_STARTING":
+            Task = self.startingTaskList[update.task_id.value]
+            logging.debug("Task %s is starting." % update.task_id.value)
+        elif update.state == "TASK_RUNNING":
+            if update.task_id.value in self.startingTaskList:
+                Task = self.startingTaskList[update.task_id.value]
+                logging.info("Task %s running in %s. Moving to running list" %
+                (update.task_id.value, update.container_status.network_infos[0].ip_addresses[0].ip_address))
+                self.runningTaskList[update.task_id.value] = Task
+                del self.startingTaskList[update.task_id.value]
+        elif update.state == "TASK_FAILED":
+            Task = None
+            if update.task_id.value in self.startingTaskList:
+                Task = self.startingTaskList[update.task_id.value]
+                del self.startingTaskList[update.task_id.value]
+            elif update.task_id.value in self.runningTaskList:
+                Task = self.runningTaskList[update.task_id.value]
+                del self.runningTaskList[update.task_id.value]
+            if Task:
+                logging.info("Uni task: %s failed." % Task.taskId)
+                self.idleTaskList.append(Task)
+                driver.reviveOffers()
+            else:
+                logging.error("Received task failed for unknown task: %s" % update.task_id.value )
+        else:
+            logging.info("Received status %s for task id: %s" % (update.state, update.task_id.value))
+```
+
+O código completo do **scheduler.py** está presente em https://github.com/elijose55/Mesos-Tutorial
+
+Descrevendo agora as tarefas que foram criada na inicialização da classe do **Scheduler**, criamos duas tarefas a serem executadas sobre os agentes do mesos:
+```python
+    Task("taskHelloWorld", "echo HelloWorld", .1, 100)
+    Task("taskDIR", "mkdir /home/ubuntu/HelloMesos", .1, 100)
+```
+A primeira simplesmente executa um comando "***echo HelloWorld***", porém não é possível observar o output do comando, uma vez que ele roda no agente. Então, criamos uma segunda tarefa para conseguirmos observar de fato sua execução, nela há um comando para que uma pasta ***HelloMesos*** seja criada no diretório ***/home/ubuntu/***. É importante notar que na infraestrutura do Mesos que criamos nesse tutorial tanto o master quanto os agentes estão na mesma máquina, por isso conseguimos observar o resultado do comando dessa segunda tarefa.
+
+Finalmente, para rodar o framework criado basta criar um arquivo scheduler.py na máquina onde o tutorial de implantação foi executado ou clonar diretamente do git https://github.com/elijose55/Mesos-Tutorial e configurar uma variável de ambiente com o IP público da máquina do Mesos Master:
+```sh
+$ nano scheduler.py
+OU
+$ git clone https://github.com/elijose55/Mesos-Tutorial.git
+
+$ export MESOS_MASTER_IP=34.201.73.112
+$ python3 scheduler.py
+```
+Então, após executar o **scheduler** você deverá receber um output como abaixo:
+IMAGEM
+E como se pode observar o diretório ***HelloMesos*** é criado após a execução da tarefa no scheduler.
+IMAGEM
+
+
+
+
+    
+
+    
+    
+    
+    
+    
+O framework criado foi baseado nas seguintes fontes:
+http://mesos.apache.org/documentation/latest/app-framework-development-guide/
+https://github.com/mesosphere/RENDLER/tree/master/python
+https://github.com/smurli/pymesos-sample
+
+
+
+
+
