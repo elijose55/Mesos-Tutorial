@@ -9,19 +9,17 @@ from threading import Thread
 import signal
 import time
 import enum
+import os
 
-MESOS_MASTER_IP = "139.59.11.188"
+MESOS_MASTER_IP = os.environ["MESOS_MASTER_IP"]
+#MESOS_MASTER_IP = "139.59.11.188"
 
-class TryTask:
-    def __init__(self, taskId, command, cpu=.1, mem=10):
+class Task:
+    def __init__(self, taskId, command, cpu, mem):
         self.taskId = taskId
         self.command = command
         self.cpu = cpu
         self.mem = mem
-
-    def toString(self):
-        str = "TaskId:%s, Cmd:%s, CPU=%d, MEM=%d" % (self.taskId, self.command, self.cpu, self.mem)
-        return str
 
     def __getResource(self, res, name):
         for r in res:
@@ -39,13 +37,13 @@ class TryTask:
 
     def acceptOffer(self, offer):
         accept = True
-        if self.cpu != 0:   #verifica se o valor do resource de cpu > 0
+        if self.cpu != 0:
             cpu = self.__getResource(offer.resources, "cpus")
-            if self.cpu > cpu:  #verifica se o cpu necessario para a task > offer de cpu
+            if self.cpu > cpu:
                 accept =  False
-        if self.mem != 0:   #verifica se o valor do resource de memoria > 0
+        if self.mem != 0:
             mem = self.__getResource(offer.resources, "mem")
-            if self.mem > mem:  #verifica se a memoria necessaria para a task > offer de memoria
+            if self.mem > mem:
                 accept = False
         if(accept == True):
             self.__updateResource(offer.resources, "cpus", self.cpu)
@@ -62,11 +60,9 @@ class TryScheduler(Scheduler):
         self.terminatingTaskList = {}
 
 
-        self.idleTaskList.append(TryTask("task1", "echo TryTask-task1 && sleep 500"))
-        self.idleTaskList.append(TryTask("task2", "echo TryTask-task2 && sleep 500"))
-        self.idleTaskList.append(TryTask("task3", "echo TryTask-task3 && sleep 500", .1, 100))
-        self.idleTaskList.append(TryTask("task4", "echo TryTask-task4 && sleep 500", .1, 200))
-        self.idleTaskList.append(TryTask("task5", "echo TryTask-task5 && sleep 500", .2, 200))
+        self.idleTaskList.append(Task("taskTeste", "echo TaskTeste && sleep 5", .1, 100))
+        self.idleTaskList.append(Task("taskHelloWorld", "echo HelloWORLD", .1, 100))
+        self.idleTaskList.append(Task("taskDIR", "mkdir /home/ubuntu//HelloMesos", .1, 100))
 
     def resourceOffers(self, driver, offers):
         logging.debug("Received new offers")
@@ -85,23 +81,23 @@ class TryScheduler(Scheduler):
             while True:
                 if len(self.idleTaskList) == 0:
                     break
-                TryTask = self.idleTaskList.pop(0)
-                if TryTask.acceptOffer(offer):
+                Task = self.idleTaskList.pop(0)
+                if Task.acceptOffer(offer):
                     task = Dict()
-                    task_id = TryTask.taskId
+                    task_id = Task.taskId
                     task.task_id.value = task_id
                     task.agent_id.value = offer.agent_id.value
                     task.name = 'task {}'.format(task_id)
-                    task.command.value = TryTask.command
+                    task.command.value = Task.command
                     task.resources = [
-                        dict(name='cpus', type='SCALAR', scalar={'value': TryTask.cpu}),
-                        dict(name='mem', type='SCALAR', scalar={'value': TryTask.mem}),
+                        dict(name='cpus', type='SCALAR', scalar={'value': Task.cpu}),
+                        dict(name='mem', type='SCALAR', scalar={'value': Task.mem}),
                     ]
-                    self.startingTaskList[task_id] = TryTask
+                    self.startingTaskList[task_id] = Task
                     taskList.append(task)
-                    logging.info("Starting task: %s, in node: %s" % (TryTask.taskId, offer.hostname))
+                    logging.info("Starting task: %s, in node: %s" % (Task.taskId, offer.hostname))
                 else:
-                    pendingTaksList.append(TryTask)
+                    pendingTaksList.append(Task)
 
             if(len(taskList)):
                     driver.launchTasks(offer.id, taskList, filters)
@@ -110,26 +106,26 @@ class TryScheduler(Scheduler):
 
     def statusUpdate(self, driver, update):
         if update.state == "TASK_STARTING":
-            TryTask = self.startingTaskList[update.task_id.value]
+            Task = self.startingTaskList[update.task_id.value]
             logging.debug("Task %s is starting." % update.task_id.value)
         elif update.state == "TASK_RUNNING":
             if update.task_id.value in self.startingTaskList:
-                TryTask = self.startingTaskList[update.task_id.value]
+                Task = self.startingTaskList[update.task_id.value]
                 logging.info("Task %s running in %s. Moving to running list" %
                 (update.task_id.value, update.container_status.network_infos[0].ip_addresses[0].ip_address))
-                self.runningTaskList[update.task_id.value] = TryTask
+                self.runningTaskList[update.task_id.value] = Task
                 del self.startingTaskList[update.task_id.value]
         elif update.state == "TASK_FAILED":
-            TryTask = None
+            Task = None
             if update.task_id.value in self.startingTaskList:
-                TryTask = self.startingTaskList[update.task_id.value]
+                Task = self.startingTaskList[update.task_id.value]
                 del self.startingTaskList[update.task_id.value]
             elif update.task_id.value in self.runningTaskList:
-                TryTask = self.runningTaskList[update.task_id.value]
+                Task = self.runningTaskList[update.task_id.value]
                 del self.runningTaskList[update.task_id.value]
-            if TryTask:
-                logging.info("Uni task: %s failed." % TryTask.taskId)
-                self.idleTaskList.append(TryTask)
+            if Task:
+                logging.info("Uni task: %s failed." % Task.taskId)
+                self.idleTaskList.append(Task)
                 driver.reviveOffers()
             else:
                 logging.error("Received task failed for unknown task: %s" % update.task_id.value )
