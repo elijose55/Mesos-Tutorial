@@ -52,15 +52,13 @@ class Task:
         else:
             return False
 
-class TryScheduler(Scheduler):
+class PythonScheduler(Scheduler):
     def __init__(self):
         self.idleTaskList = []
         self.startingTaskList = {}
         self.runningTaskList = {}
         self.terminatingTaskList = {}
 
-
-        self.idleTaskList.append(Task("taskTeste", "echo TaskTeste && sleep 5", .1, 100))
         self.idleTaskList.append(Task("taskHelloWorld", "echo HelloWORLD", .1, 100))
         self.idleTaskList.append(Task("taskDIR", "mkdir /home/ubuntu//HelloMesos", .1, 100))
 
@@ -141,7 +139,7 @@ def main():
     framework.failover_timeout = 75
 
     driver = MesosSchedulerDriver(
-        TryScheduler(),
+        PythonScheduler(),
         framework,
         MESOS_MASTER_IP,
         use_addict=True,
