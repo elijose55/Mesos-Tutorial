@@ -1,3 +1,4 @@
+
 # Tutorial Apache Mesos
 
 Para realizar esse tutorial, é necessária uma máquina rodando Ubuntu server, podendo estar rodando na plataforma de sua escolha: AWS, Azure ou VirtualBox na sua própria máquina.
@@ -5,23 +6,23 @@ Nesse começo trataremos sobre como criar uma instância na AWS adequada para ro
 #####  Criando instância na AWS EC2
 1. Realize o login no AWS Console e navegue para a seção do EC2.
 
-3. Clique em **Launch Instance** e selecione a imagem **Ubuntu Server 16.04 LTS AMI (Eligible for Free tier)**.
+2. Clique em **Launch Instance** e selecione a imagem **Ubuntu Server 16.04 LTS AMI (Eligible for Free tier)**.
  ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/1.png)
-4. Em **Instance Type** selecione **t2.micro** e continue para **Configure Instance Details**.
+3. Em **Instance Type** selecione **t2.micro** e continue para **Configure Instance Details**.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/2.png)
-5. Selecione para todos os campos a opção **default** e continue para **Add Storage**.
+4. Selecione para todos os campos a opção **default** e continue para **Add Storage**.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/3.png)
-6. Em storage mantenha a opção padrão: **8GB General Purpose SSD**.
+5. Em storage mantenha a opção padrão: **8GB General Purpose SSD**.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/4.png)
-7. Adicione uma tag de **Name** na instância para indentifica-lá.
+6. Adicione uma tag de **Name** na instância para indentifica-lá.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/5.png)
-8. Na seção de **Security Groups**, crie um com as portas **22, 2181, 5050** abertas. Caso planeje instalar o Marathon posteriormente, abra a porta 8080 também para acessar o Marathon UI.
+7. Na seção de **Security Groups**, crie um com as portas **22, 2181, 5050** abertas. Caso planeje instalar o Marathon posteriormente, abra a porta 8080 também para acessar o Marathon UI.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/6.png)
-9. Por fim, clique em **Review and Launch** e selecione uma key pair (caso já possua uma) ou crie e baixe uma para acessar a instância.
-10. Assim que a instância estiver rodando, acesse-a por meio de uma conexão SSH utilizando o **Public IP** e a **key pair** existente ou criada.
-
- ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/7.png)
+8. Por fim, clique em **Review and Launch** e selecione uma key pair (caso já possua uma) ou crie e baixe uma para acessar a instância.
+9. Assim que a instância estiver rodando, acesse-a por meio de uma conexão SSH utilizando o **Public IP** e a **key pair** existente ou criada.
  
+	![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/7.png)
+
 11. Se você estiver usando **Windows**, será necessário utilizar o **Putty** para gerar um arquivo **.ppk** a partir do arquivo baixado **.pem** e para acessar a instância.
 12. Se estiver usando **Linux**, é possível se conectar diretamente do terminal utilizando o arquivo **.pem** e o **Public IP** da instância. Para isso basta utlizar os seguintes comandos, subtituindo o *[/dir/da/keypair.pem]* pelo diretório onde o arquivo *.pem* da keypair está :
     ```sh
