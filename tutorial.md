@@ -1,29 +1,30 @@
-### Tutorial
+# Tutorial Apache Mesos
 
 Para realizar esse tutorial, é necessária uma máquina rodando Ubuntu server, podendo estar rodando na plataforma de sua escolha: AWS, Azure ou VirtualBox na sua própria máquina.
 Nesse começo trataremos sobre como criar uma instância na AWS adequada para rodar o Mesos.
 #####  Criando instância na AWS EC2
 1. Realize o login no AWS Console e navegue para a seção do EC2.
-2. Clique em **Launch Instance** e selecione a imagem **Ubuntu Server 16.04 LTS AMI (Eligible for Free tier)**.
+
+3. Clique em **Launch Instance** e selecione a imagem **Ubuntu Server 16.04 LTS AMI (Eligible for Free tier)**.
  ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/1.png)
-3. Em **Instance Type** selecione **t2.micro** e continue para **Configure Instance Details**.
+4. Em **Instance Type** selecione **t2.micro** e continue para **Configure Instance Details**.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/2.png)
-4. Selecione para todos os campos a opção **default** e continue para **Add Storage**.
+5. Selecione para todos os campos a opção **default** e continue para **Add Storage**.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/3.png)
-5. Em storage mantenha a opção padrão: **8GB General Purpose SSD**.
+6. Em storage mantenha a opção padrão: **8GB General Purpose SSD**.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/4.png)
-6. Adicione uma tag de **Name** na instância para indentifica-lá.
+7. Adicione uma tag de **Name** na instância para indentifica-lá.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/5.png)
-7. Na seção de **Security Groups**, crie um com as portas **22, 2181, 5050** abertas. Caso planeje instalar o Marathon posteriormente, abra a porta 8080 também para acessar o Marathon UI.
+8. Na seção de **Security Groups**, crie um com as portas **22, 2181, 5050** abertas. Caso planeje instalar o Marathon posteriormente, abra a porta 8080 também para acessar o Marathon UI.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/6.png)
-8. Por fim, clique em **Review and Launch** e selecione uma key pair (caso já possua uma) ou crie e baixe uma para acessar a instância.
-9. Assim que a instância estiver rodando, acesse-a por meio de uma conexão SSH utilizando o **Public IP** e a **key pair** existente ou criada.
+9. Por fim, clique em **Review and Launch** e selecione uma key pair (caso já possua uma) ou crie e baixe uma para acessar a instância.
+10. Assim que a instância estiver rodando, acesse-a por meio de uma conexão SSH utilizando o **Public IP** e a **key pair** existente ou criada.
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/7.png)
-10. Se você estiver usando **Windows**, será necessário utilizar o **Putty** para gerar um arquivo **.ppk** a partir do arquivo baixado **.pem** e para acessar a instância.
-11. Se estiver usando **Linux**, é possível conectar diretamente do terminal utilizando o arquivo **.pem** e o **Public IP** da instância. Para isso basta utlizar os seguintes comandos:
+11. Se você estiver usando **Windows**, será necessário utilizar o **Putty** para gerar um arquivo **.ppk** a partir do arquivo baixado **.pem** e para acessar a instância.
+12. Se estiver usando **Linux**, é possível se conectar diretamente do terminal utilizando o arquivo **.pem** e o **Public IP** da instância. Para isso basta utlizar os seguintes comandos, subtituindo o *[/dir/da/keypair.pem]* pelo diretório onde o arquivo *.pem* da keypair está :
     ```sh
-    $ chmod 400 keypair.pem
-    $ ssh –i /dir/da/pem ubuntu@[IP-DA-INSTANCIA]
+    $ chmod 400 /dir/da/keypair.pem
+    $ ssh –i /dir/da/keypair.pem ubuntu@[IP-DA-INSTANCIA]
     ```
 
 #####  Configurando ambiente da Instância
@@ -125,10 +126,11 @@ Para o mesos-slave:
 
 Quando todos os serviços estiverem rodando corretamente, utilize seu browser e acesse o endereço **[IP_PUBLICO_INSTANCIA]:5050** para entrar no dashboard do mesos, ilustrado abaixo:
 **Observação:** Se seu computador estiver conectado a uma rede pública, como de faculdades, esse endereço pode ser bloqueado no browser.
+
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/16.png)
 Como não rodamos nenhum framework ainda, a lista de frameworks estará vazia. 
 
-Para executar um comando simples na infraestrutura recém-criada para testa-la podemos utilizar a seguinte sintaxe:
+Para executar um comando simples na infraestrutura recém-criada, para testá-la podemos utilizar a seguinte sintaxe:
 ```sh
 $ mesos-execute --master=<IP_PUBLICO>:5050 --name="echo-test" --command=echo "Hello, World"
 ```
@@ -152,7 +154,7 @@ import enum
 import os
 ```
 
-Primeiramente temos uma classe que define as **Tasks**, estas recebem em sua inicialização um ***taskId***, um ***comando*** a ser executado e os ***resources necessários (cpu e memória)***.
+Primeiramente temos uma classe que define as **Tasks**, estas recebem em sua inicialização um ***taskId***, um ***comando*** a ser executado e os **resources necessários (cpu e memória)**.
 ```python
 class Task:
     def __init__(self, taskId, command, cpu, mem):
@@ -163,7 +165,7 @@ class Task:
 ```
 
 Então temos um conjunto de métodos para essa classe que são utilizados para aceitar uma oferta de recursos para executar a tarefa: 
-- O método **_getResource** retorna valor de um recurso específico disponibilizado em uma oferta, por exemplo, **memória**, ele é utilizado na etapa de definir se os recursos de uma oferta são suficientes para rodar a tarefa.
+- O método **__getResource** retorna valor de um recurso específico disponibilizado em uma oferta, por exemplo, **memória**, ele é utilizado na etapa de definir se os recursos de uma oferta são suficientes para rodar a tarefa.
     ```python
     def __getResource(self, res, name):
         for r in res:
@@ -172,7 +174,7 @@ Então temos um conjunto de métodos para essa classe que são utilizados para a
         return 0.0
     ```
     
-- O método **_updateResource** atualiza o valor de um recurso específico, ele é utlizado quando uma oferta é aceita. Assim, ele basicamente subtrai o valor necessário de certo recurso para a tarefa do valor total de certo recurso na oferta.
+- O método **__updateResource** atualiza o valor de um recurso específico, ele é utlizado quando uma oferta é aceita. Assim, ele basicamente subtrai o valor necessário de certo recurso para a tarefa do valor total de certo recurso na oferta.
     ```python
     def __updateResource(self, res, name, value):
         if value <= 0:
@@ -204,7 +206,7 @@ Então temos um conjunto de métodos para essa classe que são utilizados para a
     ```
     
 Em seguida temos uma classe que define o **Scheduler**, ela é inicializada com listas e dicionários vazios que são usados para armazenarem as tarefas disponíveis, em inicialização, em execução e terminadas. 
-Além disso, neste caso na incialização da classe já inserimos na lista de tarefas disponíveis as tarefas a serem executadas, mas poderiamos criar um método para que a classe recebesse as tarefas dinâmicamente. Essas tarefas serão melhor explicadas futuramente neste guia.
+Além disso, neste caso na incialização da classe já inserimos na lista de tarefas disponíveis as tarefas a serem executadas, mas poderiamos criar um método para que a classe recebesse as tarefas dinâmicamente. Essas tarefas serão melhor explicadas mais a frente neste guia.
 ```python
 class PythonScheduler(Scheduler):
     def __init__(self):
@@ -290,7 +292,7 @@ Por fim, há o método ***statusUpdate*** que é utilizado para logar o status d
             logging.info("Received status %s for task id: %s" % (update.state, update.task_id.value))
 ```
 
-O código completo do **scheduler.py** está presente [aqui](https://github.com/elijose55/Mesos-Tutorial/blob/master/scheduler.py) 
+O código completo do [**scheduler.py**](https://github.com/elijose55/Mesos-Tutorial/blob/master/scheduler.py) está presente [aqui](https://github.com/elijose55/Mesos-Tutorial/blob/master/scheduler.py) 
 
 Descrevendo agora as tarefas que foram criada na inicialização da classe do **Scheduler**, criamos duas tarefas a serem executadas sobre os agentes do mesos:
 ```python
@@ -319,7 +321,7 @@ Além disso, é possível ver o framework criado na dashboard do Mesos, com seus
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/19.png)
 
 
-Clicando o **ID** do framework detalhamos suas tarefas:
+Clicando no **ID** do framework detalhamos suas tarefas:
 ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/20.png)
 
 
@@ -355,5 +357,4 @@ https://linuxacademy.com/guide/25034-introduction-to-apache-mesos/
 
 
 
-
-
+### Por Eli Jose, Pedro Azambuja e Rafael Viera
