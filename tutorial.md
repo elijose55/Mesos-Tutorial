@@ -20,7 +20,7 @@ Nesse começo trataremos sobre como criar uma instância na AWS adequada para ro
 9. Por fim, clique em **Review and Launch** e selecione uma key pair (caso já possua uma) ou crie e baixe uma para acessar a instância.
 10. Assim que a instância estiver rodando, acesse-a por meio de uma conexão SSH utilizando o **Public IP** e a **key pair** existente ou criada.
 
-![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/7.png)
+ ![alt text](https://raw.githubusercontent.com/elijose55/Mesos-Tutorial/master/imagens/7.png)
 11. Se você estiver usando **Windows**, será necessário utilizar o **Putty** para gerar um arquivo **.ppk** a partir do arquivo baixado **.pem** e para acessar a instância.
 12. Se estiver usando **Linux**, é possível se conectar diretamente do terminal utilizando o arquivo **.pem** e o **Public IP** da instância. Para isso basta utlizar os seguintes comandos, subtituindo o *[/dir/da/keypair.pem]* pelo diretório onde o arquivo *.pem* da keypair está :
     ```sh
