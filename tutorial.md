@@ -27,7 +27,7 @@ Nesse começo trataremos sobre como criar uma instância na AWS adequada para ro
     ```
 
 #####  Configurando ambiente da Instância
-1. Após se conectar a instância, é preciso instalar o Java JDK 8
+1. Após se conectar a instância, é preciso instalar o Java JDK 8.
     ```sh
     $ sudo apt-get update
     $ sudo apt install openjdk-8-jdk openjdk-8-jre
