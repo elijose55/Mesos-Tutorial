@@ -1,6 +1,8 @@
 
 # Tutorial Apache Mesos
 
+### O relatório final + tutorial está disponível no arquivo [relatorio_final.pdf](https://github.com/elijose55/Mesos-Tutorial/blob/master/relatorio_final.pdf)
+
 Para realizar esse tutorial, é necessária uma máquina rodando Ubuntu server, podendo estar rodando na plataforma de sua escolha: AWS, Azure ou VirtualBox na sua própria máquina.
 Nesse começo trataremos sobre como criar uma instância na AWS adequada para rodar o Mesos.
 #####  Criando instância na AWS EC2
